@@ -38,13 +38,8 @@ func setupRoutes(db *sql.DB) {
 		json.NewEncoder(w).Encode(tables)
 	})
 
-	http.HandleFunc("GET /{tableName}", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("GET /{tableName}", validateTableNameMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		tableName := r.PathValue("tableName")
-
-		if !isValidTableName(tableName) {
-			http.Error(w, "Invalid table name", http.StatusBadRequest)
-			return
-		}
 
 		data, err := fetchTableData(db, tableName)
 		if err != nil {
@@ -52,16 +47,11 @@ func setupRoutes(db *sql.DB) {
 			return
 		}
 		json.NewEncoder(w).Encode(data)
-	})
+	}))
 
-	http.HandleFunc("GET /{tableName}/{primaryKey}", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("GET /{tableName}/{primaryKey}", validateTableNameMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		tableName := r.PathValue("tableName")
 		primaryKeyValue := r.PathValue("primaryKey")
-
-		if !isValidTableName(tableName) {
-			http.Error(w, "Invalid table name", http.StatusBadRequest)
-			return
-		}
 
 		primaryKeyColumn, err := GetPrimaryKeyColumn(db, tableName)
 		if err != nil {
@@ -75,7 +65,7 @@ func setupRoutes(db *sql.DB) {
 			return
 		}
 		json.NewEncoder(w).Encode(data)
-	})
+	}))
 }
 
 func fetchTables(db *sql.DB) ([]string, error) {
@@ -210,4 +200,17 @@ func GetPrimaryKeyColumn(db *sql.DB, tableName string) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("no primary key found for table %s", tableName)
+}
+
+func validateTableNameMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		tableName := r.PathValue("tableName")
+
+		if !isValidTableName(tableName) {
+			http.Error(w, "Invalid table name", http.StatusBadRequest)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	}
 }
