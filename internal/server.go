@@ -49,6 +49,17 @@ func setupRoutes(db *sql.DB) {
 		json.NewEncoder(w).Encode(data)
 	}))
 
+	// http.HandleFunc("POST /{tableName}", validateTableNameMiddleware(func(w http.ResponseWriter, r *http.Request) {
+	// 	tableName := r.PathValue("tableName")
+
+	// 	data, err := insertRowAndReturnData(db, tableName, r)
+	// 	if err != nil {
+	// 		http.Error(w, err.Error(), http.StatusInternalServerError)
+	// 		return
+	// 	}
+	// 	json.NewEncoder(w).Encode(data)
+	// }))
+
 	http.HandleFunc("GET /{tableName}/{primaryKey}", validateTableNameMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		tableName := r.PathValue("tableName")
 		primaryKeyValue := r.PathValue("primaryKey")
@@ -168,6 +179,75 @@ func fetchTableRowData(db *sql.DB, tableName, primaryKeyColumn, primaryKeyValue 
 
 	return rowData, nil
 }
+
+// func insertRowAndReturnData(db *sql.DB, tableName string, r *http.Request) (map[string]interface{}, error) {
+// 	var columnValues map[string]interface{}
+// 	if err := json.NewDecoder(r.Body).Decode(&columnValues); err != nil {
+// 		return nil, fmt.Errorf("error decoding request body: %v", err)
+// 	}
+
+// 	columns := []string{}
+// 	placeholders := []string{}
+// 	values := []interface{}{}
+// 	for col, val := range columnValues {
+// 		columns = append(columns, col)
+// 		placeholders = append(placeholders, "?")
+// 		values = append(values, val)
+// 	}
+// 	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)",
+// 		tableName,
+// 		strings.Join(columns, ", "),
+// 		strings.Join(placeholders, ", "),
+// 	)
+
+// 	result, err := db.Exec(query, values...)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("error inserting data: %v", err)
+// 	}
+// 	lastInsertId, err := result.LastInsertId()
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to retrieve last insert ID: %v", err)
+// 	}
+
+// 	return fetchInsertedRowData(db, tableName, lastInsertId)
+
+// }
+
+// func fetchInsertedRowData(db *sql.DB, tableName string, lastInsertId int64) (map[string]interface{}, error) {
+// 	// Need to call GetPrimaryKeyValue again instead???
+// 	query := fmt.Sprintf("SELECT * FROM %s WHERE id = ?", tableName)
+// 	row, err := db.Query(query, lastInsertId)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to fetch inserted row: %v", err)
+// 	}
+// 	defer row.Close()
+
+// 	if !row.Next() {
+// 		return nil, sql.ErrNoRows
+// 	}
+
+// 	columns, err := row.Columns()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	values := make([]interface{}, len(columns))
+// 	valuePtrs := make([]interface{}, len(columns))
+// 	for i := range values {
+// 		valuePtrs[i] = &values[i]
+// 	}
+
+// 	if err := row.Scan(valuePtrs...); err != nil {
+// 		return nil, err
+// 	}
+
+// 	rowData := make(map[string]interface{})
+// 	for i, col := range columns {
+// 		val := *valuePtrs[i].(*interface{})
+// 		rowData[col] = val
+// 	}
+
+// 	return rowData, nil
+// }
 
 func isValidTableName(name string) bool {
 	match, _ := regexp.MatchString("^[a-zA-Z0-9_]+$", name)
