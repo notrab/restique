@@ -3,8 +3,10 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
-	"restique/internal"
+	"restique/server"
 
 	"github.com/spf13/cobra"
 )
@@ -19,7 +21,11 @@ var rootCmd = &cobra.Command{
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		dbFile = args[0]
-		internal.StartServer(dbFile, port)
+		if !isValidExtension(dbFile) {
+			fmt.Fprintf(os.Stderr, "Invalid file extension for database file: %s\n", dbFile)
+			os.Exit(1)
+		}
+		server.StartServer(dbFile, port)
 	},
 }
 
@@ -32,4 +38,15 @@ func Execute() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+func isValidExtension(fileName string) bool {
+	allowedExtensions := []string{"sqlite", "sqlite3", "db", "db3", "s3db", "sl3"}
+	ext := strings.TrimPrefix(filepath.Ext(fileName), ".")
+	for _, allowedExt := range allowedExtensions {
+		if ext == allowedExt {
+			return true
+		}
+	}
+	return false
 }
